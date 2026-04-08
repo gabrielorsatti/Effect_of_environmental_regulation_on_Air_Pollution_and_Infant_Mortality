@@ -1,0 +1,14 @@
+# Données lourdes ou confidentielles
+*.dta
+*.csv
+*.xlsx
+
+# Fichiers de résultats et logs
+*.log
+*.smcl
+*.gph
+
+# Fichiers temporaires système
+.DS_Store
+Thumbs.db
+.Rproj.user

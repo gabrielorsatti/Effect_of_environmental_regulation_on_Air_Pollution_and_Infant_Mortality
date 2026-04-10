@@ -1,0 +1,207 @@
+----------------------------------------------------------------------------
+      name:  logT2
+       log:  C:\Users\gab\Documents\GitHub\ Effect_of_environmental_regulati
+> on_on_Air_Pollution_and_Infant_Mortality\Log/Table2_01102014.txt
+  log type:  text
+ opened on:   8 Apr 2026, 16:15:44
+
+. 
+. **************************************************************************
+> *********
+. * Table 2. Summary Statistics (Long Difference)
+. **************************************************************************
+> *********
+. 
+. /* Air */
+. u "data/Combined.dta", clear
+
+. 
+. /* Keep only obs with some electronic air pollution info */
+. keep if e_spm_mean < . | e_spm_max < . | e_spm_min < . | e_so2_mean < . | 
+> e_so2_max < . | e_so2_min < . | e_no2_mean < . | e_no2_max < . | e_no2_min
+>  < . 
+(1,499 observations deleted)
+
+. 
+. /* Collapse and export Full Period stats */
+. preserve
+
+.         foreach p in "spm" "so2" "no2" {
+  2.                 g e_`p'_sd = e_`p'_mean
+  3.                 g e_`p'_p10 = e_`p'_mean
+  4.                 g e_`p'_p90 = e_`p'_mean
+  5.                 g ones_`p' = 1 if e_`p'_mean < .
+  6.         }
+(71 missing values generated)
+(71 missing values generated)
+(71 missing values generated)
+(71 missing values generated)
+(97 missing values generated)
+(97 missing values generated)
+(97 missing values generated)
+(97 missing values generated)
+(59 missing values generated)
+(59 missing values generated)
+(59 missing values generated)
+(59 missing values generated)
+
+.         collapse (mean) *_mean (sd) *sd (sum) ones* (p10) *p10 (p90) *p90 
+
+.         foreach var of varlist e_spm_mean-ones_no2 {
+  2.                 replace `var' = round(`var', .01)
+  3.         }
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+
+.         outsheet using "Output/T2/T2_fp_air.txt", replace
+(file Output/T2/T2_fp_air.txt not found)
+
+. restore
+
+. 
+. /* Keep early and late periods */
+. keep if year < 1991 | year > 2003
+(876 observations deleted)
+
+. g ld = year > 2003
+
+. 
+. foreach p in "spm" "so2" "no2" {
+  2.         g ld_`p'_mean = e_`p'_mean
+  3.         g ld_`p'_sd = e_`p'_mean
+  4.         g ld_`p'_ones = 1 if e_`p'_mean < .
+  5.         g ld_`p'_p10 = e_`p'_mean
+  6.         g ld_`p'_p90 = e_`p'_mean
+  7. }
+(25 missing values generated)
+(25 missing values generated)
+(25 missing values generated)
+(25 missing values generated)
+(25 missing values generated)
+(68 missing values generated)
+(68 missing values generated)
+(68 missing values generated)
+(68 missing values generated)
+(68 missing values generated)
+(31 missing values generated)
+(31 missing values generated)
+(31 missing values generated)
+(31 missing values generated)
+(31 missing values generated)
+
+. 
+. /* Collapse into long difference stats */
+. collapse (mean) ld_*_mean (sd) *sd (sum) *ones (p10) ld_*_p10 (p90) ld_*_p
+> 90, by(ld)
+
+. order ld ld_spm* ld_so2* ld_no2*
+
+. 
+. /* Rounding */
+. foreach var of varlist ld_* {
+  2.         replace `var' = round(`var', .01)
+  3. }
+(2 real changes made)
+(2 real changes made)
+(0 real changes made)
+(2 real changes made)
+(2 real changes made)
+(2 real changes made)
+(2 real changes made)
+(0 real changes made)
+(0 real changes made)
+(2 real changes made)
+(2 real changes made)
+(2 real changes made)
+(0 real changes made)
+(1 real change made)
+(1 real change made)
+
+. /* Export LD */
+. outsheet using "Output/T2/T2_ld_air.txt", replace
+(file Output/T2/T2_ld_air.txt not found)
+
+. 
+. /* Water */
+. u "data/india_waters_cityyear.dta", clear
+file data/india_waters_cityyear.dta not found
+r(601);
+
+end of do-file
+
+r(601);
+
+. do "C:\Users\gab\AppData\Local\Temp\STD3cb4_000000.tmp"
+
+. **************************************************************************
+> *********
+. 
+. * File: Table3_01102014.do
+. * Author: Jon Petkun (jbpetkun@mit.edu)
+. * Date: January 10, 2014
+. * Paper: Greenstone & Hanna 2014, Environmental Regulations & Pollution in
+>  India
+. * Contact: Rema Hanna - rema_hanna@hks.harvard.edu or Michael Greenstone -
+>  mgreenst@mit.edu
+. 
+. /*
+> Objective: The objective of this program is to generate Table 3 of the pap
+> er. This program
+>         performs mean shift and trend break analysis of air pollution poli
+> cies using both a 
+>         single-stage standard DiD approach as well as a two-stage event st
+> udy and trend break
+>         approach. 
+> 
+> 
+> Structure:
+> 0. Stata Setup
+> 1. Data prep: Generate policy event-years on air dataset
+> 2. Run single-stage and two-stage regressions 
+>         a. CAT policy
+>         b. SCAP policy
+> 3. Clean-up
+> 
+> Specifications:
+> 1. Single-stage approach (standard difference-in-differences regressions):
+>         a. Mean shift (includes post*treatment only)
+>         b. Mean shift (includes post*treatment and city-year time trends)
+>         c. Trendbreak (included post*treatment, city-year time trends, and
+>  post*treatment*time-trend)
+> 2. Two-stage approach (event study followed by mean-shift or trend-break r
+> egressions)
+>         a. Mean shift: reg taub post*treatment [aw=1/tause]
+>         b. Mean shift w/ time trend: reg taub post*treatment timetrend [aw
+> =1/tause]
+>         c. Trend break: reg taub post*treatment timetrend post*treatment*t
+> imetrend [1/tause]
+> */
+. 
+. **************************************************************************
+> *********
+. **************************************************************************
+> *********
+. * 0. Setup
+. **************************************************************************
+> *********
+. 
+. * 0. Setup
+. clear all
+
+. set more off
+
+. * Les versions récentes de Stata gèrent la mémoire automatiquement, 
+. * mais on laisse ces lignes pour la compatibilité.
+. cap set mem 500m
+
+. cap set matsize 10000
+
+. 
+. cap log close _all

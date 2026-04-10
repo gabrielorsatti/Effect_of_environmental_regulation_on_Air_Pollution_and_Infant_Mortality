@@ -1,0 +1,135 @@
+----------------------------------------------------------------------------
+      name:  logT1_tab
+       log:  C:/Users/gab/Documents/GitHub/ Effect_of_environmental_regulati
+> on_on_Air_Pollution_and_Infant_Mortality/Log/Table1_01102014.txt
+  log type:  text
+ opened on:   8 Apr 2026, 16:26:40
+
+. 
+. ************************
+. /* Air Pollution */
+. * Utilisation du global pour charger les données
+. u "${mypath}data/combined.dta", clear
+
+. 
+. 
+. egen city_id = group(city)
+
+. bys state city: egen count = count(e_spm_mean)
+
+. 
+. cap drop temp*
+
+. g temp = year if actionplan_sc == 1
+(2,854 missing values generated)
+
+. egen temp2 = min(temp), by(city_id) 
+(2,583 missing values generated)
+
+. egen temp3 = min(year), by(city_id) 
+
+. g tauSC = year - temp2 if temp2 > temp3 & (e_spm_mean<. | e_so2_mean<. | e
+> _no2_mean<.)
+(2,642 missing values generated)
+
+. g neveradoptSC = temp2 >= .
+
+. g tempx = 1 if actionplan_sc==1 & (e_spm_mean<. | e_so2_mean<. | e_no2_mea
+> n<.)          // the following 3 lines of code determine whether there are
+>  any cities which enacted the policy but are missing pollution data for AL
+> L post-policy years
+(2,855 missing values generated)
+
+. egen tempy = min(tempx) if temp2<., by(city_id)
+(2,583 missing values generated)
+
+. ta tempy if temp2<., missing            // no cities fit this description,
+>  so no more changes need be made
+
+      tempy |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          1 |        357      100.00      100.00
+------------+-----------------------------------
+      Total |        357      100.00
+
+. 
+. g temp4 = tauSC >= 3 & tauSC < .
+
+. g temp5 = tauSC <= -3 & tauSC < .
+
+. egen Mtemp4 = max(temp4), by(city_id)
+
+. egen Mtemp5 = max(temp5), by(city_id)
+
+. g useSC = (Mtemp4 == 1 & Mtemp5 == 1 & count > 1) | (neveradoptSC == 1 & c
+> ount > 1)
+
+. 
+. drop Mtemp* temp*
+
+. g temp = year if catconverter == 1
+(2,618 missing values generated)
+
+. egen temp2 = min(temp), by(city_id)
+(2,289 missing values generated)
+
+. egen temp3 = min(year), by(city_id)
+
+. g tauCAT = year - temp2 if temp2 > temp3 & (e_spm_mean<. | e_so2_mean<. | 
+> e_no2_mean<.)
+(2,433 missing values generated)
+
+. g neveradoptCAT = temp2 >= .
+
+. g tempx = 1 if catconverter==1 & (e_spm_mean<. | e_so2_mean<. | e_no2_mean
+> <.)           // the following 3 lines of code determine whether there are
+>  any cities which enacted the policy but are missing pollution data for AL
+> L post-policy years
+(2,644 missing values generated)
+
+. egen tempy = min(tempx) if temp2<., by(city_id)
+(2,310 missing values generated)
+
+. ta tempy if temp2<., missing            // Silvassa enacted catconv in 199
+> 8 but has missing poll data starting in 1996. Include it.
+
+      tempy |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          1 |        630       96.77       96.77
+          . |         21        3.23      100.00
+------------+-----------------------------------
+      Total |        651      100.00
+
+. replace neveradoptCAT = 1 if tempy>=. & temp2<.
+(21 real changes made)
+
+. replace tauCAT = . if tempy>=. & temp2<.
+(7 real changes made, 7 to missing)
+
+. 
+. g temp4 = tauCAT >= 3 & tauCAT < .
+
+. g temp5 = tauCAT <= -3 & tauCAT < .
+
+. egen Mtemp4 = max(temp4), by(city_id) 
+
+. egen Mtemp5 = max(temp5), by(city_id)
+
+. g useCAT = (Mtemp4 == 1 & Mtemp5 == 1 & count > 1) | (neveradoptCAT == 1 &
+>  count > 1)
+
+. 
+. drop if useSC==0 | useCAT==0
+(336 observations deleted)
+
+. drop if e_spm_mean >= .
+(1,282 observations deleted)
+
+. 
+. log close logT1_tab
+      name:  logT1_tab
+       log:  C:/Users/gab/Documents/GitHub/ Effect_of_environmental_regulati
+> on_on_Air_Pollution_and_Infant_Mortality/Log/Table1_01102014.txt
+  log type:  text
+ closed on:   8 Apr 2026, 16:26:40
+----------------------------------------------------------------------------

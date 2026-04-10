@@ -1,0 +1,2 @@
+e_spm_mean	e_so2_mean	e_no2_mean	e_spm_sd	e_so2_sd	e_no2_sd	ones_spm	ones_so2	ones_no2	e_spm_p10	e_so2_p10	e_no2_p10	e_spm_p90	e_so2_p90	e_no2_p90
+223.23	17.26	26.82	113.99	15.17	17.98	1370	1344	1382	90.51058	4	10	378.4369	35.37281	48.7

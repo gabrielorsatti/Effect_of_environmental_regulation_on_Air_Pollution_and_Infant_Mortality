@@ -1,0 +1,924 @@
+----------------------------------------------------------------------------
+      name:  logT3
+       log:  C:\Users\gab\Documents\GitHub\ Effect_of_environmental_regulati
+> on_on_Air_Pollution_and_Infant_Mortality\Log/Table3_01102014.txt
+  log type:  text
+ opened on:   8 Apr 2026, 16:21:21
+
+. **************************************************************************
+> *********
+. * 1. Data prep: Generate policy event-years on air dataset
+. **************************************************************************
+> *********
+. 
+. * Supreme Court Action Plan and Catalytic Converter policies *
+. foreach pollutant in spm so2 no2 { 
+  2.         use "${mypath}data/combined.dta", clear
+  3.         egen city_id = group(city)
+  4.         bys state city: egen count = count(e_`pollutant'_mean)
+  5. 
+.         * Generate Supreme Court Action Plan taus
+.         cap drop temp*
+  6.         g temp = year if actionplan_sc == 1
+  7.         egen temp2 = min(temp), by(city_id) 
+  8.         egen temp3 = min(year), by(city_id) 
+  9.         g tauSC = year - temp2 if temp2 > temp3 & e_`pollutant'_mean<.
+ 10.         g neveradoptSC = temp2 >= .
+ 11.         replace tauSC = 0 if neveradoptSC == 1 & e_`pollutant'_mean < .
+>  // We code the non-adopting cities so that they are always in event year 
+> 0
+ 12.         g tempx = 1 if actionplan_sc==1 & e_`pollutant'_mean<.         
+>  // the following 3 lines of code determine whether there are any cities w
+> hich enacted the policy but are missing pollution data for ALL post-policy
+>  years
+ 13.         egen tempy = min(tempx) if temp2<., by(city_id)
+ 14.         ta tempy if temp2<., missing            // no cities fit this d
+> escription, so no more changes need be made
+ 15. 
+.         g temp4 = tauSC >= 3 & tauSC < .
+ 16.         g temp5 = tauSC <= -3 & tauSC < .
+ 17.         egen Mtemp4 = max(temp4), by(city_id) 
+ 18.         egen Mtemp5 = max(temp5), by(city_id) 
+ 19.         g useSC = (Mtemp4 == 1 & Mtemp5 == 1 & count > 1) | (neveradopt
+> SC == 1 & count > 1)
+ 20. 
+.         * Generate Catalytic Converter Policy taus
+.         cap drop Mtemp* temp*
+ 21.         g temp = year if catconverter == 1
+ 22.         egen temp2 = min(temp), by(city_id) 
+ 23.         egen temp3 = min(year), by(city_id) 
+ 24.         g tauCAT = year - temp2 if temp2 > temp3 & e_`pollutant'_mean<.
+ 25.         g neveradoptCAT = temp2 >= .
+ 26.         replace tauCAT = 0 if neveradoptCAT == 1 & e_`pollutant'_mean <
+>  . // We code the non-adopting cities so that they are always in event yea
+> r 0
+ 27.         g tempx = 1 if catconverter==1 & e_`pollutant'_mean<.
+ 28.         egen tempy = min(tempx) if temp2<., by(city_id)
+ 29.         ta tempy if temp2<., missing
+ 30.         replace neveradoptCAT = 1 if tempy>=. & temp2<.
+ 31.         replace tauCAT = . if tempy>=. & temp2<.
+ 32. 
+.         * The following lines restrict the sample to only those cities wit
+> h at an observation at least three years prior to and after
+.         *       policy adoption. We also want to estimate Eqns (1) and (2)
+>  with an unrestricted sample. For this reason, we'll save restricted
+.         *       and unrestricted versions of the dataset.
+.         g temp4 = tauCAT >= 3 & tauCAT < .
+ 33.         g temp5 = tauCAT <= -3 & tauCAT < .
+ 34.         egen Mtemp4 = max(temp4), by(city_id) 
+ 35.         egen Mtemp5 = max(temp5), by(city_id)
+ 36.         g useCAT = (Mtemp4 == 1 & Mtemp5 == 1 & count > 1) | (neveradop
+> tCAT == 1 & count > 1)
+ 37. 
+.         drop if useSC==0 | useCAT==0
+ 38.         drop if e_`pollutant'_mean >= .
+ 39.         ta tauSC
+ 40.         ta tauCAT
+ 41.         g one = 1
+ 42. 
+.         * Generate individual event-year dummies for Supreme Court Action 
+> Plans
+.         forv tau = 7(-1)1 {
+ 43.                 g tauSCm`tau' = tauSC == -`tau'
+ 44.                 la var tauSCm`tau' "This obs is `tau' years before acti
+> on plan began"
+ 45.         }
+ 46.         forv tau = 0/3 {
+ 47.                 g tauSC`tau' = tauSC == `tau'
+ 48.                 la var tauSC`tau' "This obs is `tau' years after action
+>  plan began"
+ 49.         }
+ 50.         g tauSCL = tauSC<-7
+ 51.         g tauSCR = tauSC>3 & tauSC<.
+ 52. 
+.         * Generate individual event-year dummies for Catalytic Converter P
+> olicy
+.         forv tau = 7(-1)1 {
+ 53.                 g tauCATm`tau' = tauCAT == -`tau'
+ 54.                 la var tauCATm`tau' "This obs is `tau' years before cat
+> alytic converters mandated"
+ 55.         }
+ 56.         forv tau = 0/9 {
+ 57.                 g tauCAT`tau' = tauCAT == `tau'
+ 58.                 la var tauCAT`tau' "This obs is `tau' years after catal
+> ytic converters mandated"
+ 59.         }
+ 60.         g tauCATL = tauCAT<-7
+ 61.         g tauCATR = tauCAT>9 & tauCAT<.
+ 62.         
+.         * Save pollutant specific dataset
+.         save "${mypath}data/combined_taus_`pollutant'_stddid.dta", replace
+>       
+ 63. }
+(2,854 missing values generated)
+(2,583 missing values generated)
+(2,643 missing values generated)
+(1,073 real changes made)
+(2,855 missing values generated)
+(2,583 missing values generated)
+
+      tempy |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          1 |        357      100.00      100.00
+------------+-----------------------------------
+      Total |        357      100.00
+(2,618 missing values generated)
+(2,289 missing values generated)
+(2,455 missing values generated)
+(885 real changes made)
+(2,662 missing values generated)
+(2,310 missing values generated)
+
+      tempy |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          1 |        630       96.77       96.77
+          . |         21        3.23      100.00
+------------+-----------------------------------
+      Total |        651      100.00
+(21 real changes made)
+(7 real changes made, 7 to missing)
+(336 observations deleted)
+(1,282 observations deleted)
+
+      tauSC |      Freq.     Percent        Cum.
+------------+-----------------------------------
+        -17 |          1        0.08        0.08
+        -16 |          6        0.45        0.53
+        -15 |          6        0.45        0.98
+        -14 |         10        0.76        1.74
+        -13 |         12        0.91        2.65
+        -12 |         12        0.91        3.56
+        -11 |         11        0.83        4.39
+        -10 |         14        1.06        5.45
+         -9 |         13        0.98        6.43
+         -8 |         10        0.76        7.19
+         -7 |         15        1.13        8.32
+         -6 |         16        1.21        9.53
+         -5 |         16        1.21       10.74
+         -4 |         16        1.21       11.95
+         -3 |         16        1.21       13.16
+         -2 |         16        1.21       14.37
+         -1 |         16        1.21       15.58
+          0 |      1,052       79.58       95.16
+          1 |         15        1.13       96.29
+          2 |         16        1.21       97.50
+          3 |         16        1.21       98.71
+          4 |         11        0.83       99.55
+          5 |          1        0.08       99.62
+          6 |          1        0.08       99.70
+          7 |          1        0.08       99.77
+          8 |          1        0.08       99.85
+          9 |          1        0.08       99.92
+         10 |          1        0.08      100.00
+------------+-----------------------------------
+      Total |      1,322      100.00
+
+     tauCAT |      Freq.     Percent        Cum.
+------------+-----------------------------------
+        -11 |          5        0.38        0.38
+        -10 |          8        0.61        0.99
+         -9 |         10        0.76        1.75
+         -8 |         19        1.44        3.19
+         -7 |         20        1.52        4.71
+         -6 |         22        1.67        6.39
+         -5 |         23        1.75        8.14
+         -4 |         18        1.37        9.51
+         -3 |         18        1.37       10.87
+         -2 |         26        1.98       12.85
+         -1 |         26        1.98       14.83
+          0 |        896       68.14       82.97
+          1 |         26        1.98       84.94
+          2 |         24        1.83       86.77
+          3 |         19        1.44       88.21
+          4 |         22        1.67       89.89
+          5 |         25        1.90       91.79
+          6 |         24        1.83       93.61
+          7 |         24        1.83       95.44
+          8 |         24        1.83       97.26
+          9 |         24        1.83       99.09
+         10 |          4        0.30       99.39
+         11 |          4        0.30       99.70
+         12 |          4        0.30      100.00
+------------+-----------------------------------
+      Total |      1,315      100.00
+(file C:/Users/gab/Documents/GitHub/
+    Effect_of_environmental_regulation_on_Air_Pollution_and_Infant_Mortali
+    > ty/data/combined_taus_spm_stddid.dta not found)
+file C:/Users/gab/Documents/GitHub/
+    Effect_of_environmental_regulation_on_Air_Pollution_and_Infant_Mortali
+    > ty/data/combined_taus_spm_stddid.dta saved
+(2,854 missing values generated)
+(2,583 missing values generated)
+(2,646 missing values generated)
+(1,050 real changes made)
+(2,855 missing values generated)
+(2,583 missing values generated)
+
+      tempy |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          1 |        357      100.00      100.00
+------------+-----------------------------------
+      Total |        357      100.00
+(2,618 missing values generated)
+(2,289 missing values generated)
+(2,452 missing values generated)
+(856 real changes made)
+(2,657 missing values generated)
+(2,310 missing values generated)
+
+      tempy |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          1 |        630       96.77       96.77
+          . |         21        3.23      100.00
+------------+-----------------------------------
+      Total |        651      100.00
+(21 real changes made)
+(7 real changes made, 7 to missing)
+(546 observations deleted)
+(1,098 observations deleted)
+
+      tauSC |      Freq.     Percent        Cum.
+------------+-----------------------------------
+        -17 |          1        0.08        0.08
+        -16 |          6        0.46        0.54
+        -15 |          6        0.46        1.00
+        -14 |         10        0.77        1.77
+        -13 |         11        0.85        2.62
+        -12 |         11        0.85        3.47
+        -11 |         12        0.93        4.40
+        -10 |         14        1.08        5.48
+         -9 |         13        1.00        6.48
+         -8 |         10        0.77        7.25
+         -7 |         15        1.16        8.41
+         -6 |         16        1.23        9.65
+         -5 |         15        1.16       10.80
+         -4 |         15        1.16       11.96
+         -3 |         16        1.23       13.19
+         -2 |         16        1.23       14.43
+         -1 |         16        1.23       15.66
+          0 |      1,029       79.40       95.06
+          1 |         15        1.16       96.22
+          2 |         16        1.23       97.45
+          3 |         16        1.23       98.69
+          4 |         11        0.85       99.54
+          5 |          1        0.08       99.61
+          6 |          1        0.08       99.69
+          7 |          1        0.08       99.77
+          8 |          1        0.08       99.85
+          9 |          1        0.08       99.92
+         10 |          1        0.08      100.00
+------------+-----------------------------------
+      Total |      1,296      100.00
+
+     tauCAT |      Freq.     Percent        Cum.
+------------+-----------------------------------
+        -11 |          3        0.23        0.23
+        -10 |          8        0.62        0.85
+         -9 |         10        0.78        1.63
+         -8 |         18        1.40        3.03
+         -7 |         20        1.55        4.58
+         -6 |         21        1.63        6.21
+         -5 |         23        1.78        7.99
+         -4 |         20        1.55        9.54
+         -3 |         18        1.40       10.94
+         -2 |         26        2.02       12.96
+         -1 |         26        2.02       14.97
+          0 |        863       66.95       81.92
+          1 |         26        2.02       83.94
+          2 |         23        1.78       85.73
+          3 |         23        1.78       87.51
+          4 |         26        2.02       89.53
+          5 |         26        2.02       91.54
+          6 |         26        2.02       93.56
+          7 |         23        1.78       95.35
+          8 |         24        1.86       97.21
+          9 |         24        1.86       99.07
+         10 |          4        0.31       99.38
+         11 |          4        0.31       99.69
+         12 |          4        0.31      100.00
+------------+-----------------------------------
+      Total |      1,289      100.00
+(file C:/Users/gab/Documents/GitHub/
+    Effect_of_environmental_regulation_on_Air_Pollution_and_Infant_Mortali
+    > ty/data/combined_taus_so2_stddid.dta not found)
+file C:/Users/gab/Documents/GitHub/
+    Effect_of_environmental_regulation_on_Air_Pollution_and_Infant_Mortali
+    > ty/data/combined_taus_so2_stddid.dta saved
+(2,854 missing values generated)
+(2,583 missing values generated)
+(2,647 missing values generated)
+(1,089 real changes made)
+(2,855 missing values generated)
+(2,583 missing values generated)
+
+      tempy |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          1 |        357      100.00      100.00
+------------+-----------------------------------
+      Total |        357      100.00
+(2,618 missing values generated)
+(2,289 missing values generated)
+(2,446 missing values generated)
+(888 real changes made)
+(2,651 missing values generated)
+(2,310 missing values generated)
+
+      tempy |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          1 |        630       96.77       96.77
+          . |         21        3.23      100.00
+------------+-----------------------------------
+      Total |        651      100.00
+(21 real changes made)
+(7 real changes made, 7 to missing)
+(441 observations deleted)
+(1,170 observations deleted)
+
+      tauSC |      Freq.     Percent        Cum.
+------------+-----------------------------------
+        -17 |          1        0.08        0.08
+        -16 |          6        0.45        0.53
+        -15 |          6        0.45        0.98
+        -14 |         10        0.75        1.73
+        -13 |         11        0.83        2.56
+        -12 |         10        0.75        3.31
+        -11 |         12        0.90        4.21
+        -10 |         14        1.05        5.27
+         -9 |         13        0.98        6.25
+         -8 |         10        0.75        7.00
+         -7 |         15        1.13        8.13
+         -6 |         16        1.20        9.33
+         -5 |         15        1.13       10.46
+         -4 |         15        1.13       11.59
+         -3 |         16        1.20       12.79
+         -2 |         16        1.20       14.00
+         -1 |         16        1.20       15.20
+          0 |      1,063       79.98       95.18
+          1 |         15        1.13       96.31
+          2 |         16        1.20       97.52
+          3 |         16        1.20       98.72
+          4 |         11        0.83       99.55
+          5 |          1        0.08       99.62
+          6 |          1        0.08       99.70
+          7 |          1        0.08       99.77
+          8 |          1        0.08       99.85
+          9 |          1        0.08       99.92
+         10 |          1        0.08      100.00
+------------+-----------------------------------
+      Total |      1,329      100.00
+
+     tauCAT |      Freq.     Percent        Cum.
+------------+-----------------------------------
+        -11 |          4        0.30        0.30
+        -10 |          8        0.61        0.91
+         -9 |         10        0.76        1.66
+         -8 |         18        1.36        3.03
+         -7 |         19        1.44        4.46
+         -6 |         21        1.59        6.05
+         -5 |         23        1.74        7.79
+         -4 |         20        1.51        9.30
+         -3 |         18        1.36       10.67
+         -2 |         26        1.97       12.63
+         -1 |         26        1.97       14.60
+          0 |        893       67.55       82.15
+          1 |         26        1.97       84.11
+          2 |         23        1.74       85.85
+          3 |         23        1.74       87.59
+          4 |         26        1.97       89.56
+          5 |         26        1.97       91.53
+          6 |         26        1.97       93.49
+          7 |         24        1.82       95.31
+          8 |         25        1.89       97.20
+          9 |         25        1.89       99.09
+         10 |          4        0.30       99.39
+         11 |          4        0.30       99.70
+         12 |          4        0.30      100.00
+------------+-----------------------------------
+      Total |      1,322      100.00
+(file C:/Users/gab/Documents/GitHub/
+    Effect_of_environmental_regulation_on_Air_Pollution_and_Infant_Mortali
+    > ty/data/combined_taus_no2_stddid.dta not found)
+file C:/Users/gab/Documents/GitHub/
+    Effect_of_environmental_regulation_on_Air_Pollution_and_Infant_Mortali
+    > ty/data/combined_taus_no2_stddid.dta saved
+
+. 
+. **************************************************************************
+> *********
+. * 2. Run single-stage and two-stage regressions
+. **************************************************************************
+> *********
+. 
+. * Catalytic Converter policy *
+. local placeholder "replace" // we use this to control the outreg command
+
+. foreach pollutant in spm so2 no2 {
+  2.         use "${mypath}data/combined_taus_`pollutant'_stddid.dta", clear
+  3. * Single-Stage Regressions:
+.         gen scaprange = (tauSC >= -7 & tauSC <= 3) // the two-stage regres
+> sions only include SC event years between -7 & 3
+  4.         gen scap = (tauSC >= 0) & (neveradoptSC == 0)
+  5.         gen scappolicy = scap*scaprange
+  6.         gen scaptau = tauSC*scaprange
+  7.         gen scap_trend = scap*scaprange*tauSC
+  8.         replace scap_trend = scap_trend + 1 if (tauSC >= 0 & tauSC <= 3
+> )
+  9.         gen catrange = (tauCAT >= -7 & tauCAT <= 9) // the two-stage re
+> gressions only include CAT event years between -7 & 9
+ 10.         gen catconv = (tauCAT >= 0) & (neveradoptCAT == 0)
+ 11.         gen catconvpolicy = catconv*catrange
+ 12.         gen catconvtau = tauCAT*catrange
+ 13.         gen catconv_trend = catconv*catrange*tauCAT
+ 14.         replace catconv_trend = catconv_trend + 1 if (tauCAT >= 0 & tau
+> CAT <= 9)
+ 15. 
+. *       Mean shift (includes post*policy plus the usual controls)
+.         xi: reg e_`pollutant'_mean scaprange scappolicy tauSCL tauSCR catr
+> ange catconvpolicy tauCATL tauCATR lit_urban mean i.city i.year [aw = pop_
+> urban], cluster(city)
+ 16.                 outreg2 catconvpolicy using "${mypath}Output/T3/Table3-
+> CAT-`pollutant'.xls", dec(2) se par ctitle("Eqn 3a") aster(coef) replace
+ 17. *       Mean shift (includes post*policy and city-year time trend, plus
+>  the usual controls)
+.         xi: reg e_`pollutant'_mean scaprange scappolicy tauSCL tauSCR scap
+> tau catrange catconvpolicy tauCATL tauCATR catconvtau lit_urban mean i.cit
+> y i.year [aw = pop_urban], cluster(city)
+ 18.                 outreg2 catconvpolicy catconvtau using "${mypath}Output
+> /T3/Table3-CAT-`pollutant'.xls", dec(2) se par ctitle("Eqn 3b") aster(coef
+> ) append
+ 19. *       Trendbreak (includes post*treated, city-year time trend, and po
+> st*treated*time-trend, plus the usual controls)
+.         xi: reg e_`pollutant'_mean scaprange scappolicy tauSCL tauSCR scap
+> tau scap_trend catrange catconvpolicy tauCATL tauCATR catconvtau catconv_t
+> rend lit_urban mean i.city i.year [aw = pop_urban], cluster(city)
+ 20.                 lincom catconvpolicy + 5*catconv_trend
+ 21.                 local coef = r(estimate)
+ 22.                 local coef = round(`coef', .01)
+ 23.                 local coef = "`coef'"
+ 24.                 if length("`coef'") < 3 {
+ 25.                         local coef = "`coef'" + "0"
+ 26.                 }
+ 27.                 local coef = substr("`coef'", 1, 6)
+ 28.                 local se = r(se)
+ 29.                 local tstat = r(estimate)/r(se)
+ 30.                 local pval = tprob(r(df), abs(`tstat'))
+ 31.                 local pval = round(`pval', .01)
+ 32.                 if `pval' <= .01 {
+ 33.                         local coef = "`coef'" + "***"
+ 34.                 }
+ 35.                 if `pval' > .01 & `pval' <= .05 {
+ 36.                         local coef = "`coef'" + "**"
+ 37.                 }
+ 38.                 if `pval' > .05 & `pval' <= .1 {
+ 39.                         local coef = "`coef'" + "*"
+ 40.                 }
+ 41.                 if length("`pval'") < 3 {
+ 42.                         local pval = "`pval'" + "0"
+ 43.                 }
+ 44.                 outreg2 catconvpolicy catconvtau catconv_trend using "$
+> {mypath}Output/T3/Table3-CAT-`pollutant'.xls", dec(2) se par ctitle("Eqn 3
+> c") aster(coef) addtext("5-Year Effect", "`coef'", "p-value", "[`pval']") 
+> append
+ 45.                 
+. * Two-Stage Regressions:
+.         * Recall that, for the purposes of the single-stage regressions, c
+> ontrol cities were coded as event year 0. Revert them to 
+.         *       event year missing.
+.         replace tauCAT = . if neveradoptCAT == 1 & e_`pollutant'_mean < .
+ 46.         replace tauSC = . if neveradoptSC == 1 & e_`pollutant'_mean < .
+ 47.         replace tauCAT0 = 0 if neveradoptCAT == 1 & e_`pollutant'_mean 
+> < .
+ 48.         replace tauSC0 = 0 if neveradoptSC == 1 & e_`pollutant'_mean < 
+> .        
+ 49. *       First stage (Event study)
+.         qui xi: reg e_`pollutant'_mean tauSCm7-tauSCm1 tauSC0-tauSC3 tauSC
+> L tauSCR tauCATm7-tauCATm1 tauCAT0-tauCAT9 tauCATL tauCATR lit_urban mean 
+> i.city i.year [aw = pop_urban]
+ 50. 
+.         * Prepare sigmat-hats
+.         gen taub = .
+ 51.         gen tause = .
+ 52.         collapse (mean) taub tause tauCATm7-tauCAT9, by(tauCAT)
+ 53.         drop if tauCAT > 9 | tauCAT < -7
+ 54.         foreach k of varlist tauCATm7-tauCATm1 tauCAT0-tauCAT9 {
+ 55.                 replace taub = _b[`k'] if `k' == 1
+ 56.                 replace tause = _se[`k'] if `k' == 1
+ 57.         }
+ 58.         drop tauCATm7-tauCAT9
+ 59.         gen catconv = (tauCAT >= 0)
+ 60.         gen tau_trend = tauCAT + 8
+ 61.         gen catconv_trend = catconv*tauCAT
+ 62.         replace catconv_trend = catconv_trend + 1 if tauCAT >= 0
+ 63.         
+. * Save the dataset of sigma-hats (for use with breakpoint tests)
+.         save "${mypath}data/sigmas_`pollutant'.dta", replace            
+ 64.         
+. *       Second stage (mean shift and trendbreak regressions)    
+.         * Trendbreak regressions - Eqn (2a)
+.         display "Outcome: `pollutant'; Policy: Catalytic Converters; Sampl
+> e: all city*years"
+ 65.         regress taub catconv [aw = 1/tause]
+ 66.                 outreg2 catconv using "${mypath}Output/T3/Table3-CAT-`p
+> ollutant'.xls", dec(2) se par ctitle("Eqn 2a") aster(coef) append        
+ 67. 
+.         * Trendbreak regressions - Eqn (2b)
+.         reg taub tauCAT catconv [aw=1/tause]
+ 68.                 outreg2 catconv tauCAT using "${mypath}Output/T3/Table3
+> -CAT-`pollutant'.xls", dec(2) se par ctitle("Eqn 2b") aster(coef) append
+ 69.         
+.         * Trendbreak regressions - Eqn (2c)
+.         reg taub tauCAT catconv catconv_trend [aw=1/tause]
+ 70.                 lincom catconv + 5*catconv_trend
+ 71.                         local coef = r(estimate)
+ 72.                         local coef = round(`coef', .01)
+ 73.                         local coef = "`coef'"
+ 74.                         if length("`coef'") < 3 {
+ 75.                                 local coef = "`coef'" + "0"
+ 76.                         }
+ 77.                         local coef = substr("`coef'", 1, 6)
+ 78.                         local tstat = r(estimate)/r(se)
+ 79.                         local pval = tprob(r(df), abs(`tstat'))
+ 80.                         local pval = round(`pval', .01)
+ 81.                         if `pval' <= .01 {
+ 82.                                 local coef = "`coef'" + "***"
+ 83.                         }
+ 84.                         if `pval' > .01 & `pval' <= .05 {
+ 85.                                 local coef = "`coef'" + "**"
+ 86.                         }
+ 87.                         if `pval' > .05 & `pval' <= .1 {
+ 88.                                 local coef = "`coef'" + "*"
+ 89.                         }
+ 90.                         if length("`pval'") < 3 {
+ 91.                                 local pval = "`pval'" + "0"
+ 92.                         }
+ 93.                         outreg2 catconv tauCAT catconv_trend using "${m
+> ypath}Output/T3/Table3-CAT-`pollutant'.xls", dec(2) se par ctitle("Eqn 2c"
+> ) aster(coef) addtext("5-Year Effect", "`coef'", "p-value", "[`pval']") ap
+> pend
+ 94. }
+(1,099 real changes made)
+(7 missing values generated)
+(7 missing values generated)
+(1,108 real changes made)
+i.city            _Icity_1-124        (_Icity_1 for city==Agra omitted)
+i.year            _Iyear_1987-2007    (naturally coded; _Iyear_1987 omitted)
+(sum of wgt is 2,202,725.72155)
+note: tauSCL omitted because of collinearity.
+note: tauCATR omitted because of collinearity.
+note: _Icity_77 omitted because of collinearity.
+note: _Icity_91 omitted because of collinearity.
+note: _Icity_121 omitted because of collinearity.
+note: _Iyear_2007 omitted because of collinearity.
+
+Linear regression                               Number of obs     =      1,1
+> 72
+                                                F(25, 120)        =         
+>  .
+                                                Prob > F          =         
+>  .
+                                                R-squared         =     0.76
+> 93
+                                                Root MSE          =     58.2
+> 07
+
+                                 (Std. err. adjusted for 121 clusters in cit
+> y)
+----------------------------------------------------------------------------
+> --
+             |               Robust
+  e_spm_mean | Coefficient  std. err.      t    P>|t|     [95% conf. interva
+> l]
+-------------+--------------------------------------------------------------
+> --
+   scaprange |   47.02038   11.58314     4.06   0.000     24.08657     69.95
+> 42
+  scappolicy |  -18.79445   14.22296    -1.32   0.189    -46.95491     9.366
+> 01
+      tauSCL |          0  (omitted)
+      tauSCR |   25.84995   35.77739     0.72   0.471    -44.98678    96.686
+> 69
+    catrange |  -1.336481     18.853    -0.07   0.944    -38.66411    35.991
+> 15
+catconvpol~y |   8.014768   12.59067     0.64   0.526    -16.91388    32.943
+> 42
+     tauCATL |   6.186499   26.15048     0.24   0.813    -45.58963    57.962
+> 63
+     tauCATR |          0  (omitted)
+   lit_urban |   .0132658   .0099537     1.33   0.185    -.0064418    .03297
+> 34
+        mean |   35.13485   21.13686     1.66   0.099    -6.714664    76.984
+> 36
+    _Icity_2 |  -161.6502   22.57733    -7.16   0.000    -206.3518   -116.94
+> 87
+    _Icity_3 |  -307.9608   13.39677   -22.99   0.000    -334.4855   -281.43
+> 61
+    _Icity_4 |  -121.7654   8.423879   -14.45   0.000    -138.4441   -105.08
+> 67
+    _Icity_5 |  -59.89662   17.29278    -3.46   0.001    -94.13513   -25.658
+> 11
+    _Icity_6 |  -253.2996   12.20539   -20.75   0.000    -277.4655   -229.13
+> 38
+    _Icity_7 |  -210.0445   7.726199   -27.19   0.000    -225.3418   -194.74
+> 72
+    _Icity_8 |  -141.8045   9.575564   -14.81   0.000    -160.7634   -122.84
+> 55
+    _Icity_9 |  -144.0175   13.85073   -10.40   0.000    -171.4409    -116.5
+> 94
+   _Icity_10 |   -279.453   9.598645   -29.11   0.000    -298.4577   -260.44
+> 84
+   _Icity_11 |  -71.80154   13.79908    -5.20   0.000    -99.12276   -44.480
+> 32
+   _Icity_12 |  -302.5716   31.25751    -9.68   0.000    -364.4593   -240.68
+> 39
+   _Icity_13 |    -177.83   16.10313   -11.04   0.000    -209.7131    -145.9
+> 47
+   _Icity_14 |   -239.587   15.28564   -15.67   0.000    -269.8515   -209.32
+> 25
+   _Icity_15 |  -327.8525   17.61802   -18.61   0.000    -362.7349     -292.
+> 97
+   _Icity_16 |  -180.8703    6.66839   -27.12   0.000    -194.0733   -167.66
+> 74
+   _Icity_17 |  -203.2368   8.718414   -23.31   0.000    -220.4987    -185.9
+> 75
+   _Icity_18 |  -271.1717   15.11878   -17.94   0.000    -301.1059   -241.23
+> 76
+   _Icity_19 |  -337.0738   16.23158   -20.77   0.000    -369.2112   -304.93
+> 65
+   _Icity_20 |  -201.2676   11.45425   -17.57   0.000    -223.9462    -178.5
+> 89
+   _Icity_21 |  -237.0138   7.743576   -30.61   0.000    -252.3455   -221.68
+> 21
+   _Icity_22 |  -321.2617   20.84303   -15.41   0.000    -362.5294   -279.99
+> 39
+   _Icity_23 |  -322.1239   9.624432   -33.47   0.000    -341.1796   -303.06
+> 82
+   _Icity_24 |  -168.0505   8.890118   -18.90   0.000    -185.6523   -150.44
+> 86
+   _Icity_25 |  -361.3211   22.95403   -15.74   0.000    -406.7685   -315.87
+> 37
+   _Icity_26 |  -216.2277   12.31653   -17.56   0.000    -240.6135   -191.84
+> 18
+   _Icity_27 |  -363.2211   12.30446   -29.52   0.000    -387.5831   -338.85
+> 92
+   _Icity_28 |  -224.0585   8.732096   -25.66   0.000    -241.3475   -206.76
+> 96
+   _Icity_29 |  -26.94294   6.918267    -3.89   0.000    -40.64063   -13.245
+> 25
+   _Icity_30 |  -163.9446    64.4307    -2.54   0.012    -291.5129   -36.376
+> 34
+   _Icity_31 |  -160.3748   14.34787   -11.18   0.000    -188.7825    -131.9
+> 67
+   _Icity_32 |  -293.7148   16.21433   -18.11   0.000    -325.8181   -261.61
+> 16
+   _Icity_33 |  -170.5466   7.191889   -23.71   0.000    -184.7861   -156.30
+> 72
+   _Icity_34 |  -284.1287   20.33636   -13.97   0.000    -324.3932   -243.86
+> 41
+   _Icity_35 |  -283.4826   14.24693   -19.90   0.000    -311.6905   -255.27
+> 47
+   _Icity_36 |  -298.9944   27.09944   -11.03   0.000    -352.6495   -245.33
+> 94
+   _Icity_37 |   -153.012   13.85073   -11.05   0.000    -180.4355   -125.58
+> 85
+   _Icity_38 |  -61.58921   9.723933    -6.33   0.000    -80.84192    -42.33
+> 65
+   _Icity_39 |  -16.65109   11.75202    -1.42   0.159    -39.91928    6.6170
+> 95
+   _Icity_40 |  -77.84358   4.600079   -16.92   0.000    -86.95142   -68.735
+> 74
+   _Icity_41 |  -41.83248   15.25189    -2.74   0.007    -72.03017   -11.634
+> 79
+   _Icity_42 |  -65.18813   10.72918    -6.08   0.000    -86.43116   -43.945
+> 09
+   _Icity_43 |  -295.9508   16.16147   -18.31   0.000    -327.9494   -263.95
+> 22
+   _Icity_44 |  -218.3395   15.05518   -14.50   0.000    -248.1477   -188.53
+> 12
+   _Icity_45 |  -263.1994   6.246734   -42.13   0.000    -275.5675   -250.83
+> 13
+   _Icity_46 |  -159.2095    27.0001    -5.90   0.000    -212.6679   -105.75
+> 12
+   _Icity_47 |  -308.9289   20.98818   -14.72   0.000     -350.484   -267.37
+> 37
+   _Icity_48 |  -281.1762   5.102852   -55.10   0.000    -291.2795   -271.07
+> 29
+   _Icity_49 |  -179.1683   14.59859   -12.27   0.000    -208.0725   -150.26
+> 41
+   _Icity_50 |  -211.2415   13.62479   -15.50   0.000    -238.2176   -184.26
+> 54
+   _Icity_51 |  -167.5077    7.34214   -22.81   0.000    -182.0446   -152.97
+> 08
+   _Icity_52 |  -194.9197   12.09074   -16.12   0.000    -218.8585   -170.98
+> 09
+   _Icity_53 |  -262.3315   23.51123   -11.16   0.000    -308.8821   -215.78
+> 09
+   _Icity_54 |   -141.108   9.009805   -15.66   0.000    -158.9467   -123.26
+> 92
+   _Icity_55 |  -240.0168   4.891565   -49.07   0.000    -249.7017   -230.33
+> 18
+   _Icity_56 |  -166.7462   9.517521   -17.52   0.000    -185.5902   -147.90
+> 21
+   _Icity_57 |  -184.1478   9.982814   -18.45   0.000    -203.9131   -164.38
+> 25
+   _Icity_58 |  -237.8215    12.9835   -18.32   0.000    -263.5279   -212.11
+> 51
+   _Icity_59 |  -134.3517   9.692218   -13.86   0.000    -153.5416   -115.16
+> 18
+   _Icity_60 |  -171.1579   12.38414   -13.82   0.000    -195.6776   -146.63
+> 81
+   _Icity_61 |  -144.5329   17.44579    -8.28   0.000    -179.0744   -109.99
+> 15
+   _Icity_62 |  -.9479745   7.371339    -0.13   0.898    -15.54271    13.646
+> 76
+   _Icity_63 |  -50.47149   16.66462    -3.03   0.003    -83.46627   -17.476
+> 71
+   _Icity_64 |  -3.921384   9.559799    -0.41   0.682    -22.84912    15.006
+> 35
+   _Icity_65 |  -338.1232   12.17877   -27.76   0.000    -362.2363     -314.
+> 01
+   _Icity_66 |  -139.9787   19.27507    -7.26   0.000     -178.142   -101.81
+> 54
+   _Icity_67 |  -212.6443   9.093337   -23.38   0.000    -230.6485   -194.64
+> 01
+   _Icity_68 |  -214.2697    4.65955   -45.99   0.000    -223.4952   -205.04
+> 41
+   _Icity_69 |  -342.4319   8.949935   -38.26   0.000    -360.1521   -324.71
+> 16
+   _Icity_70 |  -343.2123   7.315752   -46.91   0.000    -357.6969   -328.72
+> 76
+   _Icity_71 |  -196.2757   17.73027   -11.07   0.000    -231.3804    -161.1
+> 71
+   _Icity_72 |  -301.1577    15.4457   -19.50   0.000    -331.7391   -270.57
+> 62
+   _Icity_73 |   -77.4253   7.740716   -10.00   0.000    -92.75138   -62.099
+> 22
+   _Icity_74 |  -117.5246   11.43219   -10.28   0.000    -140.1595   -94.889
+> 66
+   _Icity_75 |   -278.171   11.91403   -23.35   0.000      -301.76   -254.58
+> 21
+   _Icity_76 |   -193.705   12.03818   -16.09   0.000    -217.5398   -169.87
+> 03
+   _Icity_77 |          0  (omitted)
+   _Icity_78 |  -271.0244    71.8697    -3.77   0.000    -413.3214   -128.72
+> 74
+   _Icity_79 |   -330.056    4.98705   -66.18   0.000      -339.93    -320.1
+> 82
+   _Icity_80 |   -256.336   5.312059   -48.26   0.000    -266.8535   -245.81
+> 85
+   _Icity_81 |  -254.7982   10.81168   -23.57   0.000    -276.2046   -233.39
+> 19
+   _Icity_82 |  -254.4337   6.122768   -41.56   0.000    -266.5564   -242.31
+> 11
+   _Icity_83 |  -202.7834   40.41489    -5.02   0.000    -282.8021   -122.76
+> 47
+   _Icity_84 |  -198.7788   13.33086   -14.91   0.000     -225.173   -172.38
+> 46
+   _Icity_85 |  -49.97831   14.58079    -3.43   0.001    -78.84726   -21.109
+> 35
+   _Icity_86 |  -240.9942   11.29605   -21.33   0.000    -263.3596   -218.62
+> 88
+   _Icity_87 |  -182.4645   9.089292   -20.07   0.000    -200.4607   -164.46
+> 83
+   _Icity_88 |  -222.5585   7.430657   -29.95   0.000    -237.2707   -207.84
+> 63
+   _Icity_89 |   -281.431   16.10991   -17.47   0.000    -313.3275   -249.53
+> 45
+   _Icity_90 |  -83.51894   14.15991    -5.90   0.000    -111.5546   -55.483
+> 29
+   _Icity_91 |          0  (omitted)
+   _Icity_92 |  -303.9856   9.555763   -31.81   0.000    -322.9053   -285.06
+> 58
+   _Icity_93 |  -226.4075   21.64464   -10.46   0.000    -269.2624   -183.55
+> 27
+   _Icity_94 |   11.78085   7.010797     1.68   0.095    -2.100042    25.661
+> 74
+   _Icity_95 |  -137.6893   11.61125   -11.86   0.000    -160.6787   -114.69
+> 98
+   _Icity_96 |  -197.8729   18.24062   -10.85   0.000    -233.9881   -161.75
+> 78
+   _Icity_97 |  -252.6818   21.41724   -11.80   0.000    -295.0865   -210.27
+> 72
+   _Icity_98 |  -200.6413   11.48734   -17.47   0.000    -223.3855   -177.89
+> 72
+   _Icity_99 |  -214.7683   13.67133   -15.71   0.000    -241.8366      -187
+> .7
+  _Icity_100 |  -347.3388   9.181046   -37.83   0.000    -365.5166    -329.1
+> 61
+  _Icity_101 |  -275.6058   18.33176   -15.03   0.000    -311.9014   -239.31
+> 02
+  _Icity_102 |  -150.2809   8.783549   -17.11   0.000    -167.6717   -132.89
+> 01
+  _Icity_103 |  -321.5498   10.13635   -31.72   0.000    -341.6191   -301.48
+> 06
+  _Icity_104 |  -337.1498   27.51149   -12.25   0.000    -391.6207    -282.6
+> 79
+  _Icity_105 |  -179.3453   7.191889   -24.94   0.000    -193.5848   -165.10
+> 59
+  _Icity_106 |  -70.03556    17.0999    -4.10   0.000    -103.8922   -36.178
+> 94
+  _Icity_107 |  -302.9508   16.16147   -18.75   0.000    -334.9494   -270.95
+> 22
+  _Icity_108 |  -65.40672   6.981388    -9.37   0.000    -79.22938   -51.584
+> 06
+  _Icity_109 |  -218.6155   15.31418   -14.28   0.000    -248.9365   -188.29
+> 44
+  _Icity_110 |  -214.3671    12.3997   -17.29   0.000    -238.9176   -189.81
+> 65
+  _Icity_111 |  -319.4338   40.41489    -7.90   0.000    -399.4524   -239.41
+> 51
+  _Icity_112 |  -271.9383   21.47384   -12.66   0.000     -314.455   -229.42
+> 16
+  _Icity_113 |  -360.1899   33.22421   -10.84   0.000    -425.9716   -294.40
+> 83
+  _Icity_114 |   -331.452   8.918128   -37.17   0.000    -349.1093   -313.79
+> 47
+  _Icity_115 |  -300.5936   20.91209   -14.37   0.000    -341.9981   -259.18
+> 91
+  _Icity_116 |   -369.085   6.019993   -61.31   0.000    -381.0041   -357.16
+> 58
+  _Icity_117 |  -280.5979   13.64667   -20.56   0.000    -307.6173   -253.57
+> 84
+  _Icity_118 |  -166.9171   7.734305   -21.58   0.000    -182.2305   -151.60
+> 37
+  _Icity_119 |   -238.412   17.90243   -13.32   0.000    -273.8576   -202.96
+> 65
+  _Icity_120 |  -20.64492    6.14169    -3.36   0.001    -32.80504   -8.4848
+> 01
+  _Icity_121 |          0  (omitted)
+  _Icity_122 |  -215.8359    11.9875   -18.01   0.000    -239.5703   -192.10
+> 14
+  _Icity_123 |  -253.8334   9.291731   -27.32   0.000    -272.2303   -235.43
+> 64
+  _Icity_124 |   -191.725   13.69906   -14.00   0.000    -218.8482   -164.60
+> 19
+ _Iyear_1988 |  -66.27479   51.79948    -1.28   0.203    -168.8342    36.284
+> 58
+ _Iyear_1989 |  -79.18944   35.37578    -2.24   0.027     -149.231   -9.1478
+> 52
+ _Iyear_1990 |  -103.1549   41.13979    -2.51   0.013    -184.6088   -21.700
+> 99
+ _Iyear_1991 |  -89.73669   47.40705    -1.89   0.061    -183.5994     4.125
+> 97
+ _Iyear_1992 |  -118.0337   42.31423    -2.79   0.006    -201.8129   -34.254
+> 43
+ _Iyear_1993 |  -96.61144   43.16435    -2.24   0.027    -182.0739   -11.149
+> 02
+ _Iyear_1994 |  -97.69606   41.83099    -2.34   0.021    -180.5185   -14.873
+> 61
+ _Iyear_1995 |  -122.8536   41.84068    -2.94   0.004    -205.6952   -40.011
+> 96
+ _Iyear_1996 |  -114.1313   43.12265    -2.65   0.009    -199.5112   -28.751
+> 48
+ _Iyear_1997 |  -150.8698    43.5266    -3.47   0.001    -237.0495   -64.690
+> 21
+ _Iyear_1998 |  -125.7302   44.21574    -2.84   0.005    -213.2743   -38.186
+> 09
+ _Iyear_1999 |  -161.8259     43.333    -3.73   0.000    -247.6222   -76.029
+> 59
+ _Iyear_2000 |  -175.2548   44.79964    -3.91   0.000    -263.9549   -86.554
+> 59
+ _Iyear_2001 |  -171.6809    44.3752    -3.87   0.000    -259.5407   -83.821
+> 14
+ _Iyear_2002 |  -198.6321   42.61324    -4.66   0.000    -283.0034   -114.26
+> 09
+ _Iyear_2003 |   -155.659   45.34244    -3.43   0.001    -245.4339   -65.884
+> 14
+ _Iyear_2004 |  -156.8073   42.59843    -3.68   0.000    -241.1493   -72.465
+> 39
+ _Iyear_2005 |  -159.6855   45.81368    -3.49   0.001    -250.3934   -68.977
+> 57
+ _Iyear_2006 |  -162.9691   43.87414    -3.71   0.000    -249.8368   -76.101
+> 32
+ _Iyear_2007 |          0  (omitted)
+       _cons |   302.4812    130.777     2.31   0.022     43.55191    561.41
+> 05
+----------------------------------------------------------------------------
+> --
+command outreg2 is unrecognized
+r(199);
+
+end of do-file
+
+r(199);
+
+. do "C:\Users\gab\AppData\Local\Temp\STD3cb4_000000.tmp"
+
+. **************************************************************************
+> *********
+. * File: Table6_01102014.do
+. * Updated for Collaboration: Gab & Matis
+. **************************************************************************
+> *********
+. 
+. * 0. Setup
+. clear all
+
+. set more off
+
+. cap set mem 500m
+
+. cap set matsize 10000
+
+. 
+. * Fermeture de tous les logs ouverts
+. cap log close _all

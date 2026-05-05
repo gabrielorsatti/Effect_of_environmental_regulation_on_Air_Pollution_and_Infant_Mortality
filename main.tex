@@ -1,0 +1,283 @@
+\documentclass[10pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{setspace}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{hyperref}
+\usepackage{natbib}
+\usepackage{caption}
+
+\onehalfspacing
+
+\title{Effect of Environmental Regulation on Air Pollution\\ and Infant Mortality in India:\\
+A Reassessment Using Modern Difference-in-Differences Methods}
+\author{Matis Bruneau \and Gabriel Orsatti}
+\date{May 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+We revisit the findings of \citet{greenstone2014} on the effects of environmental regulation on air pollution and infant mortality in India. Using recent advances in difference-in-differences methods, we argue that the original two-way fixed effects (TWFE) design may produce misleading estimates when treatment adoption is staggered and treatment effects are heterogeneous. We implement the \citet{callaway2021} estimator and find that the catalytic converter policy significantly reduced sulfur dioxide concentrations, but the evidence for particulate matter and nitrogen dioxide is weaker. For infant mortality, the estimated effects are negative but statistically insignificant. Overall, the original conclusions of \citet{greenstone2014} appear less robust when evaluated with heterogeneity-robust methods.
+\end{abstract}
+
+% ==============================================================================
+\section{Introduction}
+% ==============================================================================
+
+Air pollution remains one of the most pressing environmental and public health challenges in developing countries. In India, rapid industrialization and urban growth have contributed to persistently high pollution levels, with significant consequences for population health, particularly infant mortality. Understanding whether environmental regulations can effectively reduce pollution and improve health outcomes is therefore a central question for policy evaluation.
+
+\citet{greenstone2014} study the effect of two major environmental policies in India on air pollution and infant mortality. These policies are the catalytic converter mandate and the Supreme Court Action Plan. Using city-year panel data and a two-way fixed effects (TWFE) difference-in-differences design, they find that these regulations led to significant reductions in several pollutants and in infant deaths.
+
+However, recent methodological contributions have revealed important limitations of TWFE estimators in settings with staggered treatment adoption. \citet{dechaisemartin2023} survey this literature and show that TWFE coefficients can be difficult to interpret when treatment effects are heterogeneous across groups or over time. In particular, already-treated units may serve as implicit controls for later-treated units, leading to biased estimates. \citet{goodman2021} provides a decomposition that makes these problematic comparisons explicit.
+
+In this paper, we revisit the empirical strategy of \citet{greenstone2014} in light of these developments. We first replicate the original TWFE approach and diagnose its limitations using the Goodman-Bacon decomposition. We then implement the \citet{callaway2021} estimator, which allows treatment effects to vary by adoption cohort and calendar year, avoiding the problematic comparisons inherent in standard TWFE. As a robustness check, we also estimate the \citet{sunab2021} interaction-weighted estimator.
+
+Our results suggest that the catalytic converter policy reduced SO$_2$ concentrations significantly, but the effects on particulate matter (SPM) and NO$_2$ are imprecise or undetectable. For infant mortality, the estimated effects are negative but far from statistically significant. These findings indicate that the original conclusions are partially supported but less robust than initially reported.
+
+% ==============================================================================
+\section{Empirical Strategy}
+% ==============================================================================
+
+\subsection{Data}
+
+The analysis relies on two city-year panel datasets from \citet{greenstone2014}. The first, \texttt{combined.dta}, contains 2,940 observations for 140 cities over 1987--2007, with air pollution outcomes: suspended particulate matter (\texttt{e\_spm\_mean}), sulfur dioxide (\texttt{e\_so2\_mean}), and nitrogen dioxide (\texttt{e\_no2\_mean}). The second, \texttt{im\_air.dta}, contains 2,331 observations for 111 cities over the same period, with infant mortality (\texttt{c\_IM}, deaths per thousand births). Both datasets include two treatment indicators: \texttt{catconverter} (catalytic converter policy) and \texttt{actionplan\_sc} (Supreme Court Action Plan). Summary statistics are reported in Table~\ref{tab:sumstats}.
+
+Treatment adoption is staggered across cities. For the catalytic converter in the pollution data, 31 cities are treated with adoption cohorts in 1995 and 1998. For the Supreme Court Action Plan, 17 cities are treated in cohorts 1997, 2003, and 2004. In the mortality data, the catalytic converter affects 25 cities (cohorts 1995, 1998, 2000), while the Action Plan affects only 6 cities (Figure~\ref{fig:timing}).
+
+\subsection{Original TWFE approach}
+
+The original empirical design uses a TWFE specification:
+\begin{equation}\label{eq:twfe}
+Y_{ct} = \alpha_c + \lambda_t + \beta \, Policy_{ct} + \varepsilon_{ct},
+\end{equation}
+where $Y_{ct}$ is the outcome in city $c$ at time $t$, $\alpha_c$ and $\lambda_t$ are city and year fixed effects, and $Policy_{ct}$ indicates whether the regulation is in force. The coefficient $\beta$ is identified from within-city variation in policy exposure, under a parallel trends assumption.
+
+\citet{greenstone2014} also estimate event-study specifications with leads and lags of treatment to assess pre-trends and the dynamic evolution of policy effects. In addition, they use a trend-break specification that allows for a change in slope after treatment.
+
+\subsection{Critique of the TWFE design}
+
+When treatment adoption is staggered, the TWFE estimator implicitly combines multiple types of comparisons: treated versus never-treated, early-treated versus not-yet-treated and, problematically, late-treated versus already-treated cities \citep{goodman2021}. If treatment effects evolve over time, already-treated cities are not valid counterfactuals for newly treated ones, and the resulting coefficient may not represent a meaningful average treatment effect.
+
+\citet{dechaisemartin2023} show that some group-time treatment effects may receive negative weights in the TWFE decomposition, so that the estimated coefficient can differ in sign from all underlying causal effects. This concern is particularly relevant for environmental policies, whose effects may take time to materialize and may vary with local enforcement capacity, baseline pollution, and time since adoption. 
+
+This issue is especially relevant here because environmental policies may generate effects that evolve after implementation \cite{dechaisemartin2023}. For instance, a regulation may initially have little impact because enforcement is weak, but later produce larger reductions in pollution as compliance improves. In such a case, comparing newly treated cities to cities treated several years earlier does not provide a valid counterfactual. The already-treated cities may already be experiencing policy effects, making them unsuitable as controls.
+
+We apply the \citet{goodman2021} decomposition to the static TWFE estimator for each pollutant (Figure~\ref{fig:bacon}). The results confirm that a non-trivial share of the identifying variation comes from comparisons involving already-treated units, motivating the use of an alternative estimator.
+
+Moreover, event-study pre-trend tests estimated via TWFE may themselves be contaminated by treatment effect heterogeneity in staggered settings, limiting their usefulness as diagnostic tools \citep{sunab2021}.
+
+A final concern regarding the original identification strategy is that the two environmental policies may overlap across cities and years. Some cities may be exposed to both the catalytic converter policy and the Supreme Court Action Plan. If these policies are implemented close to one another, the estimated effect of one policy may partly capture the effect of the other. This creates an additional identification challenge. The coefficient on a given policy can be interpreted causally only if the timing of that policy is not perfectly confounded with other simultaneous interventions. In practice, this assumption may be difficult to verify, meaning the results should be interpreted as the estimated effect of policy exposure conditional on the available variation, rather than as a perfectly isolated effect of each regulation.
+
+\subsection{Alternative estimator: Callaway and Sant'Anna (2021)}
+
+To address these concerns, we implement the group-time average treatment effect estimator of \citet{callaway2021}. The key estimand is:
+\begin{equation}\label{eq:att}
+ATT(g,t) = E\left[Y_{it}(1) - Y_{it}(0) \mid G_i = g\right],
+\end{equation}
+where $G_i = g$ is the first year city $i$ adopts the policy. This estimator recovers treatment effects separately by cohort and calendar year, using never-treated (or not-yet-treated) cities as controls. These group-time effects are then aggregated into an overall ATT or into dynamic event-study estimates by event time $e = t - g$.
+
+We use the \texttt{did} package in R with never-treated cities as the preferred control group, population weights (\texttt{pop\_urban} for pollution, \texttt{c\_birth} for infant mortality), and no anticipation. When the never-treated control group fails due to insufficient variation (as occurs for SPM), we fall back to not-yet-treated controls. As a robustness check, we also estimate the interaction-weighted estimator of \citet{sunab2021} via \texttt{fixest::sunab()}.
+
+The causal interpretation relies on conditional parallel trends (treated and control cities would have followed similar trends absent the policy), no anticipation, absence of spillovers, and correct measurement of treatment timing. We focus on the catalytic converter policy, as the Supreme Court Action Plan has too few treated units in the mortality data (only 6 cities) to produce reliable estimates.
+
+% ==============================================================================
+\section{Results}
+% ==============================================================================
+
+\subsection{Air pollution}
+
+Table~\ref{tab:comparison} reports the estimated effects of the catalytic converter policy on air pollution using both the TWFE trend-break specification and the \citet{callaway2021} estimator.
+
+For sulfur dioxide (SO$_2$), the Callaway \& Sant'Anna simple ATT is $-4.72$ ($\text{SE} = 1.90$, $p = 0.013$), indicating a statistically significant reduction. The dynamic aggregation yields a larger effect of $-6.15$ ($\text{SE} = 1.77$). These results are qualitatively consistent with the original TWFE estimates, which report a 5-year effect of $-16.40$ ($\text{SE} = 5.90$, $p = 0.006$), though the magnitude is substantially smaller under the heterogeneity-robust estimator. The event-study (Figure~\ref{fig:cs_air}) shows that reductions in SO$_2$ emerge after treatment, with some pre-treatment coefficients close to zero.
+
+For particulate matter (SPM), the Callaway \& Sant'Anna estimation with never-treated controls fails due to insufficient within-group variation. Using not-yet-treated controls does not resolve the issue. The TWFE 5-year effect is $-21.41$ ($\text{SE} = 22.50$, $p = 0.342$), already insignificant. The inability to estimate a robust C\&S effect for SPM suggests that the original finding of a PM reduction should be interpreted with caution.
+
+For nitrogen dioxide (NO$_2$), the C\&S ATT is $-0.64$ ($\text{SE} = 2.16$, $p = 0.767$), small and insignificant. The TWFE estimate is similarly inconclusive ($1.22$, $\text{SE} = 7.13$). Neither method detects a meaningful effect on NO$_2$.
+
+As a robustness check, the \citet{sunab2021} interaction-weighted estimator yields qualitatively similar conclusions: small and insignificant effects for all three pollutants (SPM: $-7.48$, $\text{SE} = 16.90$; SO$_2$: $-1.86$, $\text{SE} = 4.12$; NO$_2$: $5.04$, $\text{SE} = 6.29$). The SO$_2$ effect estimated by Sun \& Abraham is smaller and no longer significant, likely reflecting different aggregation weights.
+
+The comparison between TWFE and C\&S event-study estimates (Figure~\ref{fig:comparison}) reveals that the TWFE design tends to produce more volatile pre-treatment coefficients for SPM, consistent with contamination from already-treated comparisons. For SO$_2$, the two methods yield broadly similar event-study profiles, reinforcing the credibility of the estimated reduction.
+
+\subsection{Infant mortality}
+
+The Callaway \& Sant'Anna simple ATT for infant mortality is $-2.62$ ($\text{SE} = 5.85$, $p = 0.655$), which is not statistically significant. The dynamic aggregation yields a somewhat larger effect of $-5.75$ ($\text{SE} = 4.03$), but it remains insignificant. The event-study (Figure~\ref{fig:cs_im}) reveals substantial volatility in post-treatment coefficients, with wide confidence intervals, reflecting limited statistical power.
+
+The number of treated cities is small (only 3 cities in the 1995 cohort) and the outcome is inherently noisy at the city-year level. As a result, the infant mortality estimates are highly sensitive to outliers and should be interpreted with caution. We do not report results for the Supreme Court Action Plan on infant mortality, as several cohorts contain only one treated city, making the group-time ATT estimation unreliable.
+
+\subsection{Comparison with Greenstone and Hanna (2014)}
+
+Overall, the heterogeneity-robust estimators partially confirm and partially weaken the original findings. For SO$_2$, we find a statistically significant reduction that is directionally consistent with the original study, though the magnitude is two to three times smaller. For SPM, the original results suggested meaningful reductions, but robust estimation fails to produce a reliable estimate. For NO$_2$, both approaches fail to detect a significant effect. For infant mortality, the point estimates are negative but statistically insignificant, in contrast to the original paper which reports significant health improvements.
+
+These differences are consistent with the prediction from the recent DiD literature: TWFE estimates in staggered adoption settings can overstate precision and magnitude when treatment effects are heterogeneous.
+
+% ==============================================================================
+\section{Discussion and Conclusion}
+% ==============================================================================
+
+This paper revisits the empirical findings of \citet{greenstone2014} using modern difference-in-differences methods that account for staggered treatment adoption and treatment effect heterogeneity.
+
+\paragraph{What do the extensions add to the main paper?} Our reanalysis provides three contributions. First, we document that the TWFE design used in the original paper is vulnerable to the problems identified by the recent econometric literature: the Goodman-Bacon decomposition reveals that a non-negligible fraction of the identifying variation comes from comparisons involving already-treated cities. Second, we show that heterogeneity-robust estimators produce qualitatively different conclusions for some outcomes: the effects on SPM and infant mortality are no longer statistically significant, and the SO$_2$ effect is smaller in magnitude. Third, the consistency of the SO$_2$ result across multiple estimators (C\&S and TWFE) strengthens the evidence that the catalytic converter policy did reduce sulfur dioxide concentrations.
+
+\paragraph{Strengths and limitations of the original paper.} The original study is valuable for its comprehensive use of city-level panel data and its analysis of multiple environmental policies. The identification strategy is transparent and the paper carefully addresses several potential confounders. However, the main limitation, which was not fully appreciated at the time of publication, is the reliance on a TWFE framework in a setting with staggered adoption and plausible treatment effect heterogeneity. Additionally, the limited number of treated cities for some policies (especially the Supreme Court Action Plan in the mortality data) constrains statistical power.
+
+\paragraph{External validity.} The results are specific to the Indian institutional context of the 1990s and 2000s. Whether similar environmental regulations would produce comparable effects in other developing countries or in the more recent period is uncertain. Enforcement capacity, baseline pollution levels, and the structure of the vehicle fleet may differ substantially. India's pollution levels have continued to rise in many cities despite regulation, suggesting that the external validity of these findings to current policy debates requires caution.
+
+\paragraph{Future research.} Future work could extend this analysis by incorporating more recent data on pollution and health outcomes in India, exploiting additional policies introduced after the period covered by \citet{greenstone2014}. Spatial spillover effects deserve investigation, as pollution regulation in one city may displace economic activity and emissions to neighboring areas. Finally, combining satellite-based pollution measures with administrative health data could provide better spatial coverage and reduce the measurement error inherent in ground-level monitoring networks.
+
+% ==============================================================================
+% TABLES AND FIGURES
+% ==============================================================================
+
+\clearpage
+
+\begin{table}[H]
+\centering
+\caption{Summary statistics}
+\label{tab:sumstats}
+\begin{tabular}{lccccc}
+\toprule
+Variable & Mean & SD & N & P10 & P90 \\
+\midrule
+\multicolumn{6}{l}{\textit{Full sample period (1987--2007)}} \\
+PM ($\mu$g/m$^3$) & 223.2 & 114.0 & 1,370 & 90.9 & 378.2 \\
+SO$_2$ ($\mu$g/m$^3$) & 17.3 & 15.2 & 1,344 & 4.0 & 35.4 \\
+NO$_2$ ($\mu$g/m$^3$) & 26.8 & 18.0 & 1,382 & 10.0 & 48.7 \\
+Infant mortality (deaths/1,000) & 23.1 & 22.0 & 1,222 & 3.3 & 45.4 \\
+\midrule
+\multicolumn{6}{l}{\textit{Pre-regulation period (1987--1990)}} \\
+PM ($\mu$g/m$^3$) & 252.1 & 126.4 & 120 & 103.6 & 383.5 \\
+SO$_2$ ($\mu$g/m$^3$) & 19.4 & 13.3 & 116 & 4.4 & 38.2 \\
+NO$_2$ ($\mu$g/m$^3$) & 25.5 & 21.5 & 117 & 8.6 & 42.6 \\
+Infant mortality (deaths/1,000) & 29.0 & 31.4 & 348 & 4.8 & 54.3 \\
+\midrule
+\multicolumn{6}{l}{\textit{Post-regulation period (2004--2007)}} \\
+PM ($\mu$g/m$^3$) & 209.4 & 97.1 & 420 & 92.8 & 366.6 \\
+SO$_2$ ($\mu$g/m$^3$) & 12.2 & 8.1 & 381 & 4.0 & 22.9 \\
+NO$_2$ ($\mu$g/m$^3$) & 25.6 & 14.0 & 417 & 10.4 & 46.4 \\
+Infant mortality (deaths/1,000) & 16.7 & 14.1 & 216 & 2.7 & 36.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Treatment timing by dataset and policy}
+\label{tab:timing}
+\begin{tabular}{llcc}
+\toprule
+Dataset & Policy & Treated cities & Adoption cohorts \\
+\midrule
+\texttt{combined.dta} & Catalytic converter & 31 & 1995, 1998 \\
+\texttt{combined.dta} & Supreme Court Action Plan & 17 & 1997, 2003, 2004 \\
+\texttt{im\_air.dta} & Catalytic converter & 25 & 1995, 1998, 2000 \\
+\texttt{im\_air.dta} & Supreme Court Action Plan & 6 & 1997, 2003, 2004 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Comparison of treatment effect estimates: TWFE vs.\ Callaway \& Sant'Anna}
+\label{tab:comparison}
+\begin{tabular}{lccccc}
+\toprule
+& \multicolumn{2}{c}{TWFE trend-break (5yr)} & \multicolumn{2}{c}{C\&S simple ATT} & S\&A ATT \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-6}
+Outcome & Estimate & $p$-value & Estimate & $p$-value & Estimate \\
+\midrule
+PM (SPM) & $-21.41$ (22.50) & 0.342 & --- & --- & $-7.48$ (16.90) \\
+SO$_2$ & $-16.40$ (5.90) & 0.006 & $-4.72$ (1.90) & 0.013 & $-1.86$ (4.12) \\
+NO$_2$ & $1.22$ (7.13) & 0.864 & $-0.64$ (2.16) & 0.767 & $5.04$ (6.29) \\
+Infant mortality & --- & --- & $-2.62$ (5.85) & 0.655 & --- \\
+\bottomrule
+\end{tabular}
+\par\smallskip
+\footnotesize\textit{Notes:} Standard errors in parentheses. TWFE estimates are 5-year cumulative effects from the trend-break specification. C\&S estimates use never-treated cities as controls with population weights. S\&A denotes the Sun \& Abraham (2021) interaction-weighted estimator. PM estimation fails under C\&S due to insufficient within-group variation. IM is not estimated via TWFE trend-break due to variable specification differences.
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{figures/fig_treatment_timing_catconv.pdf}
+    \caption{Treatment adoption timing for the catalytic converter policy across cities.}
+    \label{fig:timing}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{figures/fig_bacon_decomposition.pdf}
+    \caption{Goodman-Bacon decomposition of the TWFE estimator. Each point represents a 2$\times$2 DID comparison, with the size proportional to its weight in the overall estimate. Comparisons involving already-treated units as controls contribute a non-trivial share of the total weight.}
+    \label{fig:bacon}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig_callaway_santanna_catconv.pdf}
+    \caption{Callaway \& Sant'Anna (2021) event-study estimates for air pollution outcomes (PM, SO$_2$, NO$_2$). Control group: never-treated cities. Population-weighted.}
+    \label{fig:cs_air}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{figures/fig_callaway_santanna_IM.pdf}
+    \caption{Callaway \& Sant'Anna (2021) event-study estimates for infant mortality.}
+    \label{fig:cs_im}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig_comparison_twfe_vs_cs.pdf}
+    \caption{Comparison of TWFE and Callaway \& Sant'Anna event-study estimates for the catalytic converter policy on air pollution.}
+    \label{fig:comparison}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig_final_comparison.pdf}
+    \caption{Side-by-side comparison: (A) standard TWFE event study and (B) Callaway \& Sant'Anna heterogeneity-robust event study for all three pollutants.}
+    \label{fig:final}
+\end{figure}
+
+% ==============================================================================
+% BIBLIOGRAPHY
+% ==============================================================================
+
+\bibliographystyle{apalike}
+
+\begin{thebibliography}{99}
+
+\bibitem[Callaway and Sant'Anna, 2021]{callaway2021}
+Callaway, B. and Sant'Anna, P.H.C. (2021).
+\newblock Difference-in-differences with multiple time periods.
+\newblock \textit{Journal of Econometrics}, 225(2):200--230.
+
+\bibitem[de~Chaisemartin and D'Haultf{\oe}uille, 2023]{dechaisemartin2023}
+de~Chaisemartin, C. and D'Haultf{\oe}uille, X. (2023).
+\newblock Two-way fixed effects and differences-in-differences with heterogeneous treatment effects: A survey.
+\newblock \textit{The Econometrics Journal}, 26(3):C1--C30.
+
+\bibitem[Goodman-Bacon, 2021]{goodman2021}
+Goodman-Bacon, A. (2021).
+\newblock Difference-in-differences with variation in treatment timing.
+\newblock \textit{Journal of Econometrics}, 225(2):254--277.
+
+\bibitem[Greenstone and Hanna, 2014]{greenstone2014}
+Greenstone, M. and Hanna, R. (2014).
+\newblock Environmental regulations, air and water pollution, and infant mortality in India.
+\newblock \textit{American Economic Review}, 104(10):3038--3072.
+
+\bibitem[Sun and Abraham, 2021]{sunab2021}
+Sun, L. and Abraham, S. (2021).
+\newblock Estimating dynamic treatment effects in event studies with heterogeneous treatment effects.
+\newblock \textit{Journal of Econometrics}, 225(2):175--199.
+
+\end{thebibliography}
+
+\end{document}
